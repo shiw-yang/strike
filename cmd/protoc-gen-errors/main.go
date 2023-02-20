@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/shiw-yang/strike/cmd/protoc-gen-gin/generator"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 )
@@ -28,12 +29,8 @@ func main() {
 			if !f.Generate {
 				continue
 			}
-			generateFile(p, f)
+			generator.GenerateFile(p, f)
 		}
 		return nil
 	})
-}
-
-func generateFile(p *protogen.Plugin, f *protogen.File) {
-	panic("unimplemented")
 }
