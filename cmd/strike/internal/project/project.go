@@ -1,9 +1,11 @@
 package project
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -19,17 +21,16 @@ var NewCmd = &cobra.Command{
 }
 var (
 	repoURL string
-	// todo timeout
-	// timeout string
+	timeout string
 )
 
 func init() {
 	if repoURL = os.Getenv("STRIKE_LAYOUT_REPO"); repoURL == "" {
-		repoURL = "/home/shiwei/src/strike/layout"
+		repoURL = "https://github.com/shiw-yang/strike_layout_template.git"
 	}
-	// timeout = "60s"
+	timeout = "60s"
 	NewCmd.Flags().StringVarP(&repoURL, "repo-url", "r", repoURL, "layout repo")
-	// NewCmd.Flags().StringVarP(&timeout, "time-out", "t", timeout, "time out")
+	NewCmd.Flags().StringVarP(&timeout, "time-out", "t", timeout, "time out")
 }
 
 // run is the impl of CmdCommand.Run
@@ -38,7 +39,15 @@ func run(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	// todo time out
+	// time out setting
+	t, err := time.ParseDuration(timeout)
+	if err != nil {
+		panic(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), t)
+	defer cancel()
+
+	// get project name
 	projectName := ""
 	if len(args) == 0 {
 		prompt := &survey.Input{
@@ -53,15 +62,47 @@ func run(cmd *cobra.Command, args []string) {
 	} else {
 		projectName = args[0]
 	}
-	wd := getProjectPlaceDir(projectName, dir)
+	projectName, workingDir := processProjectDir(projectName, dir)
 	project := &Project{
-		Name: filepath.Base(projectName),
+		Name: projectName,
 		Path: projectName,
 	}
-	fmt.Printf("wd: %v\n", wd)
-	fmt.Printf("project: %v\n", project)
+
+	// download template
+	done := make(chan error, 1)
+	go func() {
+		done <- project.New(ctx, workingDir, repoURL)
+	}()
+
+	// check download status
+	select {
+	case <-ctx.Done():
+		if err := ctx.Err(); err != nil {
+			fmt.Fprint(os.Stderr, "\033[31mERROR: project creation timed out\033[m\n")
+			return
+		}
+		fmt.Fprintf(os.Stderr, "\033[31mERROR: failed to create project(%s)\033[m\n", projectName)
+	case err := <-done:
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\033[31mERROR: failed to create project(%s)\033[m\n", projectName)
+			return
+		}
+	}
+
 }
 
-func getProjectPlaceDir(name, dir string) string {
-	panic("unimplemented")
+// processProjectDir process project name and dir, when name is absolute path, dir is ignored.
+func processProjectDir(name, dir string) (projectName string, workingDir string) {
+	_name := name
+	_dir := dir
+	// check name path is relative or absolute
+	if !filepath.IsAbs(name) {
+		absPath, err := filepath.Abs(name)
+		if err != nil {
+			return _name, _dir
+		}
+		_name = absPath
+	}
+
+	return filepath.Base(_name), filepath.Dir(_name)
 }
