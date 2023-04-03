@@ -7,6 +7,7 @@ require github.com/AlecAivazis/survey/v2 v2.3.6
 require github.com/fatih/color v1.15.0 // indirect
 
 require (
+	github.com/emicklei/proto v1.11.1
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

@@ -5,6 +5,7 @@ import (
 
 	"github.com/shiw-yang/strike/cmd/strike/internal/project"
 	"github.com/shiw-yang/strike/cmd/strike/internal/proto"
+	"github.com/shiw-yang/strike/cmd/strike/internal/upgrade"
 
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(project.NewCmd)
 	rootCmd.AddCommand(proto.ProtoCmd)
+	rootCmd.AddCommand(upgrade.UpgradeCmd)
 }
 
 func main() {
