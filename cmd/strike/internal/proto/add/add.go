@@ -44,7 +44,7 @@ func run(cmd *cobra.Command, args []string) {
 		Name:      filename,
 		Path:      path,
 		Package:   pkgName,
-		GoPackage: goPackage(pkgName),
+		GoPackage: goPackage(path),
 		Service:   serviceName(filename),
 	}
 	if err := p.Generate(); err != nil {
