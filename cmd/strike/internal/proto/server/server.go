@@ -31,16 +31,62 @@ func run(_ *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, "Please specify the proto file. Example: kratos proto server api/xxx.proto")
 		return
 	}
-	reader, err := os.Open(args[0])
+	for _, path := range args {
+		matches, err := filepath.Glob(path)
+		if err != nil {
+			log.Fatalf("proto server %s error: %s\n", path, err)
+		}
+		for _, match := range matches {
+			if filepath.Ext(match) != ".proto" {
+				log.Fatal("proto server must input *.proto")
+			}
+			createErr := createServer(match)
+			if createErr != nil {
+				log.Fatalf("proto server %s error: %s\n", path, err)
+			}
+		}
+	}
+
+}
+
+func getMethodType(streamsRequest, streamsReturns bool) MethodType {
+	if !streamsRequest && !streamsReturns {
+		return unaryType
+	} else if streamsRequest && streamsReturns {
+		return twoWayStreamsType
+	} else if streamsRequest {
+		return requestStreamsType
+	} else if streamsReturns {
+		return returnsStreamsType
+	}
+	return unaryType
+}
+
+func parametersName(name string) string {
+	return strings.ReplaceAll(name, ".", "_")
+}
+
+func serviceName(name string) string {
+	return toUpperCamelCase(strings.Split(name, ".")[0])
+}
+
+func toUpperCamelCase(s string) string {
+	s = strings.ReplaceAll(s, "_", " ")
+	s = cases.Title(language.Und, cases.NoLower).String(s)
+	return strings.ReplaceAll(s, " ", "")
+}
+
+func createServer(path string) error {
+	reader, err := os.Open(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer reader.Close()
 
 	parser := proto.NewParser(reader)
 	definition, err := parser.Parse()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var (
@@ -72,8 +118,7 @@ func run(_ *cobra.Command, args []string) {
 		}),
 	)
 	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
-		fmt.Printf("Target directory: %s does not exsit\n", targetDir)
-		return
+		return fmt.Errorf("Target directory: %s does not exsit\n", targetDir)
 	}
 	for _, s := range res {
 		to := filepath.Join(targetDir, strings.ToLower(s.Service)+".go")
@@ -83,38 +128,12 @@ func run(_ *cobra.Command, args []string) {
 		}
 		b, err := s.execute()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if err := os.WriteFile(to, b, 0o644); err != nil {
-			log.Fatal(err)
+			return err
 		}
 		fmt.Println(to)
 	}
-}
-
-func getMethodType(streamsRequest, streamsReturns bool) MethodType {
-	if !streamsRequest && !streamsReturns {
-		return unaryType
-	} else if streamsRequest && streamsReturns {
-		return twoWayStreamsType
-	} else if streamsRequest {
-		return requestStreamsType
-	} else if streamsReturns {
-		return returnsStreamsType
-	}
-	return unaryType
-}
-
-func parametersName(name string) string {
-	return strings.ReplaceAll(name, ".", "_")
-}
-
-func serviceName(name string) string {
-	return toUpperCamelCase(strings.Split(name, ".")[0])
-}
-
-func toUpperCamelCase(s string) string {
-	s = strings.ReplaceAll(s, "_", " ")
-	s = cases.Title(language.Und, cases.NoLower).String(s)
-	return strings.ReplaceAll(s, " ", "")
+	return nil
 }
