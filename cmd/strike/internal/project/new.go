@@ -55,7 +55,7 @@ func (p *Project) New(ctx context.Context, dir, layout string) error {
 	base.Tree(to, dir)
 
 	fmt.Printf("\n🍺 Project creation succeeded %s\n", color.RedString(p.Name))
-	fmt.Print("💻 Use the following command to start the project 👇:\n\n")
+	fmt.Printf("💻 Use the following command to start the project 👇:\n\t $make init\n\t $make build\n\t $./bin/%v --conf /path/to/config.yaml\n", p.Name)
 
 	return nil
 }
